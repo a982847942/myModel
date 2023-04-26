@@ -64,10 +64,29 @@ def clean_tokenized_text(text_lst):
 
 def tokenize_text(text):
     text = clean_text(text)
-    token_lst = [token.text.lower() for token in nlp(text)]
-    token_lst = clean_tokenized_text(token_lst)
+    # print(text)
 
-    return token_lst
+    # token_lst = [token.text.lower() for token in nlp(text)]
+    # token_lst = clean_tokenized_text(token_lst)
+    return  get_token(text)
 
 
-# print(tokenize_text("the the a a"))
+import string
+from nltk.corpus import stopwords
+def get_token(doc):
+    # split into tokens by white space
+    tokens = doc.split()
+    # remove punctuation from each token
+    table = str.maketrans('', '', string.punctuation)
+    tokens = [w.translate(table) for w in tokens]
+    # remove remaining tokens that are not alphabetic 保留只包含字母的token
+    tokens = [word for word in tokens if word.isalpha()]
+    # filter out stop words 去除停用词
+    stop_words = set(stopwords.words('english'))
+    tokens = [w for w in tokens if not w in stop_words]
+    # filter out short tokens 去掉长度过短的词
+    tokens = [word for word in tokens if len(word) > 1]
+    tokens = [token.lower() for token in tokens]
+    return ' '.join(tokens)
+
+print(tokenize_text("the sky is so3 blue http://www.baidu.com"))

@@ -5,6 +5,9 @@ import numpy as np
 
 __author__ = "Serena Khoo"
 
+import config
+
+
 class Attention(nn.Module):
 
 	"""
@@ -25,6 +28,9 @@ class Attention(nn.Module):
 		
 		# <--------- Calculating the attention, the attention is per head -------------->
 		attention_values = torch.matmul(query, key.transpose(len(key.shape) -2, len(key.shape) -1)) #QK'
+		if not config.wordAttention:
+			# print("shape:",attention_values.shape)
+			attention_values = attention_values.permute(1,0,2).contiguous()
 
 		del key
 		torch.cuda.empty_cache()

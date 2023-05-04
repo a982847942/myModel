@@ -89,6 +89,7 @@ class BiGraphDataset(Dataset):
         word_position = torch.tensor(data['word_position'])
         rootNoEnhancementFeat = torch.FloatTensor(data['root']).reshape([1,config.source_length,config.embedding_dim])
         wordNoEnhancementFeat = torch.FloatTensor(data['x'])
+
         #进行positionEmbedding  后续用于Transformer操作  这里不需要池化
         rootTransformerFeat = rootNoEnhancementFeat
         wordTransformerFeat = wordNoEnhancementFeat
@@ -97,11 +98,12 @@ class BiGraphDataset(Dataset):
         rootNoEnhancementFeat = value
         value, _ = wordNoEnhancementFeat.max(axis=1)
         wordNoEnhancementFeat = value
-        return Data(x=wordNoEnhancementFeat,
+        userFeat = torch.FloatTensor(data['x_user'])
+        return Data(x=wordNoEnhancementFeat,userFeat = userFeat,
                     edge_index=torch.LongTensor(new_edgeindex),BU_edge_index=torch.LongTensor(bunew_edgeindex),
              y=torch.LongTensor([int(data['y'])]), root=rootNoEnhancementFeat,transformerRoot = rootTransformerFeat,
                     transformerWord = wordTransformerFeat,positionRoot = rootPosition,positionWord = word_position,
-                    rootindex=torch.LongTensor([int(data['rootindex'])]))
+                    rootindex=torch.LongTensor([int(data['rootindex'])]), time = torch.LongTensor(data['x_time']))
 
 
 class UdGraphDataset(Dataset):

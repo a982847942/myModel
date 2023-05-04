@@ -19,8 +19,38 @@ import copy
 import json
 from model.tokenAttention import WordModule
 from model.tokenAttention import PositionEncoder
+from model.tokenAttention import PostModule
 
+class UserGCN(th.nn.Module):
+    #5000 64 64
+    def __init__(self,in_feats,hid_feats,out_feats):
+        super(UserGCN, self).__init__()
+        self.conv1 = GCNConv(in_feats, hid_feats)#300 64
+        self.conv2 = GCNConv(hid_feats, 200)#64 + 根结点增强器
 
+    def forward(self, data):
+        x, edge_index = data.userFeat, data.edge_index
+        x1=copy.copy(x.float())
+        x = self.conv1(x, edge_index)
+        x2=copy.copy(x)
+        rootindex = data.rootindex
+        root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
+        batch_size = max(data.batch) + 1
+        # for num_batch in range(batch_size):
+        #     index = (th.eq(data.batch, num_batch))
+        #     root_extend[index] = x1[rootindex[num_batch]]
+        # x = th.cat((x,root_extend), 1)#行方向拼接 5000 + 64
+        x = F.relu(x)
+        x = F.dropout(x, training=self.training)
+        x = self.conv2(x, edge_index)
+        x=F.relu(x)
+        # root_extend = th.zeros(len(data.batch), x2.size(1)).to(device)
+        # for num_batch in range(batch_size):
+        #     index = (th.eq(data.batch, num_batch))
+        #     root_extend[index] = x2[rootindex[num_batch]]
+        # x = th.cat((x,root_extend), 1)
+        # x= scatter_mean(x, data.batch, dim=0)
+        return x
 class TDrumorGCN(th.nn.Module):
     #5000 64 64
     def __init__(self,in_feats,hid_feats,out_feats):
@@ -89,23 +119,56 @@ class Net(th.nn.Module):
         super(Net, self).__init__()
         self.TDrumorGCN = TDrumorGCN(in_feats, hid_feats, out_feats)
         self.BUrumorGCN = BUrumorGCN(in_feats, hid_feats, out_feats)
+        self.userGCN = UserGCN(12, hid_feats, out_feats)
         self.word_module = WordModule.WordModule()
+        self.post_moudle = PostModule.PostModule()
         self.positionEncode = PositionEncoder.PositionEncoder(config.source_length)
-        #(Bu + 根结点增强器 + TD + 根结点增强器)
-        self.fc=th.nn.Linear((out_feats+hid_feats)*2,4)
+        #(Bu + 根结点增强器 + TD + 根结点增强器) 使用GCN捕获全局特征
+        self.fc=th.nn.Linear((out_feats+hid_feats)*2 + config.embedding_dim * 2,4)
+        #使用post级别的注意力来进行预测
+        self.post_fc = th.nn.Linear(config.embedding_dim,4)
+        self.fina_layer = th.nn.Linear(4 * 2,4)
 
     def forward(self, data):
         # print(data.shape)
+        root_position = data.positionRoot
+        root_feat = data.transformerRoot
         word_position = data.positionWord
         word_feat = data.transformerWord
         word_position = self.positionEncode(word_position)
-        X_word, self_atten_weights_dict_word = self.word_module(word_feat,word_position)
+        root_position = self.positionEncode(root_position)
+        # root_feat = root_feat.view(1,-1,config.embedding_dim)
+        config.wordAttention = True
+        #根节点和其它结点都进行 token-level-embedding
+        X_root,_ = self.word_module(root_feat,root_position) # [1,embedding_dim]
+        X_word, self_atten_weights_dict_word = self.word_module(word_feat,word_position)#[posts,embedding_dim]
         data.x = X_word
+        data.root = X_root
+
+        x_time = data.time
+        x_time = self.positionEncode(x_time)#time编码[posts,embedding_dim]
+        config.wordAttention = False
+        #time-post-level attention
+        output, self_atten_weights_dict_post = self.post_moudle(X_word,x_time,X_root)
+
+        user_X = self.userGCN(data)# 处理用户特征
+        user_output, user_self_atten_weights_dict_post = self.post_moudle(user_X,None,X_root)
+
         TD_x = self.TDrumorGCN(data)
         BU_x = self.BUrumorGCN(data)
-        x = th.cat((BU_x,TD_x), 1)
-        x=self.fc(x)
-        x = F.log_softmax(x, dim=1)
+
+        x_struct = th.cat((BU_x,TD_x), 1)
+        # x_struct = self.fc(x_struct)
+        # output=self.post_fc(output)
+        # x = F.log_softmax(x, dim=1)
+        output = scatter_mean(output, data.batch, dim=0)
+        user_output = scatter_mean(user_output, data.batch, dim=0)
+        # output += x_struct #简单相加  可以使用网络训练权重
+        output = th.cat((x_struct,output,user_output),dim=1)
+        # output = th.cat((x_struct,output),1)
+        # output = self.fina_layer(output)
+        output = self.fc(output)
+        x = F.log_softmax(output , dim=1)
         return x
 
 def train_GCN(treeDic, x_test, x_train,TDdroprate,BUdroprate,lr, weight_decay,patience,n_epochs,batchsize,dataname,iter,epochTime):

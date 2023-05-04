@@ -146,6 +146,7 @@ def getThread():
 
 # 转换字符串时间为时间戳
 def strTime2Timestamp(strTime: str):
+    #"created_at": "Tue Feb 01 07:40:04 +0000 2011
     temp = strTime.split(' ')
     temp.pop(-2) # 放弃掉不能读入的时区字段
     strTime = ' '.join(temp)

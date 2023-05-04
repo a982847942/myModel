@@ -40,9 +40,9 @@ class MultiHeadAttention(nn.Module):
 		self.d_v = self.d_k
 
 		# <----------- Projection layers ----------->
-		self.proj_layer_query = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(config.n_head)])
-		self.proj_layer_key = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(config.n_head)])
-		self.proj_layer_val = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(config.n_head)])
+		self.proj_layer_query = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(self.n_head)])
+		self.proj_layer_key = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(self.n_head)])
+		self.proj_layer_val = nn.ModuleList([nn.Linear(config.d_model, self.d_v) for _ in range(self.n_head)])
 
 		# <----------- Attention Layer ----------->
 		self.attention = Attention.Attention(self.d_model, self.n_head)
@@ -83,8 +83,8 @@ class MultiHeadAttention(nn.Module):
 
 		else:
 			query_head = Variable(torch.zeros((self.n_head, *query.shape[:-1], self.d_k)))
-			key_head = Variable(torch.zeros((self.n_head, *query.shape[:-1], self.d_k)))
-			val_head = Variable(torch.zeros((self.n_head, *query.shape[:-1], self.d_k)))
+			key_head = Variable(torch.zeros((self.n_head, *key.shape[:-1], self.d_k)))
+			val_head = Variable(torch.zeros((self.n_head, *val.shape[:-1], self.d_k)))
 
 
 		for i in range(self.n_head):
@@ -99,9 +99,10 @@ class MultiHeadAttention(nn.Module):
 		torch.cuda.empty_cache()
 
 		# <--------- Move the batch to be the first dimension --------->
-		query_head = query_head.permute(1,0,*(np.arange(2,len(query_head.shape)))).contiguous()
-		key_head = key_head.permute(1,0,*(np.arange(2,len(query_head.shape)))).contiguous()
-		val_head = val_head.permute(1,0,*(np.arange(2,len(query_head.shape)))).contiguous()
+		if config.wordAttention:
+			query_head = query_head.permute(1,0,*(np.arange(2,len(query_head.shape)))).contiguous()
+			key_head = key_head.permute(1,0,*(np.arange(2,len(key_head.shape)))).contiguous()
+			val_head = val_head.permute(1,0,*(np.arange(2,len(val_head.shape)))).contiguous()
 
 		# <--------- Getting the attention values -------------->
 		if key_structure is not None and val_structure is not None:

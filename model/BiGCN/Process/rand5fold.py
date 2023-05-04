@@ -4,7 +4,8 @@ import os
 
 # cwd=os.getcwd()
 # cwd= "H:/Anaconda/papaercode/MSA-BiGCN-master/BiGCN/"
-cwd = "H:/pythonProject/rumor detection/myModel/"
+# cwd = "H:/pythonProject/rumor detection/myModel/"
+cwd = "../../../"
 def load5foldData(obj):
     if 'Twitter' in obj:
         labelPath = os.path.join(cwd,"data/" +obj+"/"+ obj + "_label_All.txt")

@@ -2,7 +2,8 @@ import os
 from model.BiGCN.Process.dataset import GraphDataset,BiGraphDataset,UdGraphDataset
 # cwd=os.getcwd()
 # cwd="H:/Anaconda/papaercode/MSA-BiGCN-master/BiGCN/"
-cwd = "H:/pythonProject/rumor detection/myModel/"
+# cwd = "H:/pythonProject/rumor detection/myModel/"
+cwd = "../../../"
 
 ################################### load tree#####################################
 def loadTree(dataname):

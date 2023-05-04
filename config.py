@@ -4,7 +4,8 @@ import torch.nn as nn
 
 # print(vocab.pretrained_aliases.keys())
 # glove向量
-glove_directory = "H:/pythonProject/rumor detection/myModel/data/glove"
+# glove_directory = "H:/pythonProject/rumor detection/myModel/data/glove"
+glove_directory = "./data/glove"
 glove = vocab.GloVe(name='twitter.27B', dim=200, cache=glove_directory)
 glove.unk_init = torch.Tensor.normal_
 # print("一共包含%d个词。" % len(glove.stoi))

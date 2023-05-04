@@ -5,7 +5,8 @@ from tqdm import tqdm
 import os
 import config
 import torch
-cwd = "H:/pythonProject/rumor detection/myModel/"
+# cwd = "H:/pythonProject/rumor detection/myModel/"
+cwd = "../../../"
 class Node_tweet(object):
     def __init__(self, idx=None):
         self.children = []
